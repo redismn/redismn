@@ -15,7 +15,7 @@ RedisExp is a Node.js library that simplifies interactions with RedisJSON and Re
 Ensure Redis is running with [RedisJSON](https://redis.io/docs/stack/json/) and [RediSearch](https://redis.io/docs/stack/search/) modules.
 
 ```bash
-npm install ioredis redismn
+npm install redismn
 ```
 
 ## Usage
