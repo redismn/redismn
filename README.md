@@ -1,4 +1,4 @@
-# RedisExp - Simplified RedisJSON and RediSearch Wrapper
+# RedisExp - Simplified RedisJSON and RediSearch high level api(hset,set will be added shortly)
 
 RedisExp is a Node.js library that simplifies interactions with RedisJSON and RediSearch. It provides an intuitive API for storing JSON documents, querying, atomic transactions, and advanced aggregations.
 
