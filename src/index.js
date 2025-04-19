@@ -8,7 +8,78 @@ export default class redis_exp{
      })
 }
 async start(){
-        console.log("pinging redis"+":"+await this.client.ping());
+      this.#startUP()  ;
+}
+async #startUP(){
+    const function_script1=`
+       local operationset=cjson.decode(KEYS[1])
+       local operationget=cjson.decode(KEYS[2])
+       local ttl=KEYS[4]
+       local model_name=KEYS[3]
+       local res
+       for i, name in ipairs(operationset) do
+       redis.call("JSON.SET",model_name .. ":" .. name[1],"$",cjson.encode(name[2]))
+       redis.call("EXPIRE",model_name .. ":" .. name[1],ttl)
+       end
+        local gets={ }
+       for i, name in ipairs(operationget) do
+        local path = "$"
+        if name[2] ~= "" then
+        path = "$." .. name[2]
+        end
+        gets[i-1]=cjson.decode(redis.call("JSON.GET",model_name .. ":" .. name[1],path) )
+       end
+
+       return cjson.encode(gets)
+
+       `;
+
+    let function_name1="setget";
+    let function_script2=`
+local functable={
+  ["+"]= function(arr,obj,redisresi,i,eqntable) local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn+redisresi[obj[arr[i+1]]]) else eqntable.eqn=(eqntable.eqn+test) end end,
+   ["-"]= function(arr,obj,redisresi,i,eqntable) local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn-redisresi[obj[arr[i+1]]]) else eqntable.eqn=eqntable.eqn-test end end,
+  ["*"]= function(arr,obj,redisresi,i,eqntable) local test=tonumber(arr[i+1])if(test==nil) then eqntable.eqn=(eqntable.eqn*redisresi[obj[arr[i+1]]]) else eqntable.eqn=eqntable.eqn*test end end,
+  ["/"]= function(arr,obj,redisresi,i,eqntable)local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn/redisresi[obj[arr[i+1]]]) else eqntable.eqn=eqntable.eqn/test end end,
+  ["&"]= function(arr,obj,redisresi,i,eqntable)local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn .. redisresi[obj[arr[i+1]]]) else eqntable.eqn=eqntable.eqn .. test end end
+}
+local function numericalop(arr,obj,redisresi)
+  local eqntable={eqn=""}
+  local test=tonumber(arr[1])
+  if(test==nil)then
+    eqntable.eqn=redisresi[obj[arr[1]]]
+  else
+    eqntable.eqn=test
+end
+ for i=2 ,#arr,2 do
+    functable[arr[i]](arr,obj,redisresi,i,eqntable)
+ end
+  return eqntable.eqn
+  end
+
+local equarray=cjson.decode(KEYS[3])
+local locationobj=cjson.decode(KEYS[2])
+local key=(KEYS[1])
+local method=(KEYS[4])
+local redisres= redis.call(unpack(cjson.decode(KEYS[5])))
+for i=2,#redisres do
+local enumur= numericalop(equarray,locationobj,redisres[i])
+ local finalpathinput="$.".. key
+     redis.call("JSON.SET",redisres[i][2],finalpathinput,cjson.encode(enumur ))
+end
+return "done"
+
+`;
+    const function_name2 = "aggregatorupdate";
+    try{
+        await this.client.call("FUNCTION","LOAD",`#!lua name=mylib2 \n redis.register_function("${function_name2}",function(KEYS,ARGS) ${function_script2} end) \n redis.register_function("${function_name1}",function(KEYS,ARGS) ${function_script1} end)`)
+
+
+    }catch (e){
+
+    }
+    console.log("pinging redis"+":"+await this.client.ping());
+
 }
     /**
      * Stores a user object with a given key and optional TTL.
