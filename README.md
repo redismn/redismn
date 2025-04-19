@@ -1,6 +1,6 @@
-# RedisExp - Simplified RedisJSON and RediSearch Wrapper
+# RedisExp - Simplified Redis client library.
 
-RedisExp is a Node.js library that simplifies interactions with RedisJSON and RediSearch. It provides an intuitive API for storing JSON documents, querying, atomic transactions, and advanced aggregations.
+RedisExp is a Node.js library that simplifies interactions with RedisJSON and RediSearch. It provides an intuitive API for storing JSON documents, querying, atomic transactions, and advanced aggregations.(hset ,set ,zset,timeseries and bloom are currently developed by us)
 
 ## Features
 
@@ -9,7 +9,56 @@ RedisExp is a Node.js library that simplifies interactions with RedisJSON and Re
 - **Flexible Queries**: Perform text, range, and key-value searches.
 - **Atomic Transactions**: Chain multiple operations in a single transaction.
 - **Aggregation Pipelines**: Group, filter, sort, and reduce data with method chaining.
+- **update after aggregate**: after filter,sort and limit you can update those fields(atomic operation ,no multiple queries(single query))
+  Got it! Here's the updated README snippet with the correct function name: `update`.
 
+---
+
+### 🔄 `new feature` – Update Values for WhereAggregator (Atomically)
+
+This function is used by **WhereAggregator** to **update values it finds**, and it's optimized for **atomic performance** – no need to worry about slowdowns!
+
+####  Usage
+
+```js
+update(arrofrequiredfieldforop, pathinput, method, eqn);
+```
+
+####  Parameters
+
+- **`arrofrequiredfieldforop`** (`string[]`):  
+  An array of required field names from your schema used in the equation.
+
+- **`pathinput`** (`string`):  
+  A simple JSON path to the field you want to update.  
+  _Example_: For an object like `{ name: 'john doe', data: { friends: [] } }`, use:
+  ```js
+  "data.friends"
+  ```
+
+- **`method`** (`string`):  
+  The update method.
+  - Currently only `"set"` is supported.
+  - `"push"` will be added soon.
+
+- **`eqn`** (`string`):  
+  A string equation using the following operators:
+  - Arithmetic: `+`, `-`, `*`, `/`
+  - Concatenation: `&`  
+    _Important notes_:
+  - No brackets supported — expressions are evaluated **left to right**.
+  - Only use keys from the schema and direct values.
+  - Example:
+    ```js
+    "2+age*6&first_name"
+    // Interpreted as: ((2 + age) * 6) & first_name
+    ```
+
+> A version that supports full BODMAS (order of operations) will be released later with a trade-off in performance.
+
+---
+
+Let me know if you want to include example input/output or a quick visual of how `eqn` is parsed!
 ## Installation
 
 Ensure Redis is running with [RedisJSON](https://redis.io/docs/stack/json/) and [RediSearch](https://redis.io/docs/stack/search/) modules.
@@ -23,7 +72,7 @@ npm install ioredis redismn
 ### Initialize Client
 
 ```javascript
-import RedisExp from './redis_exp.js';
+import RedisExp from 'redismn';
 
 const redis = new RedisExp("localhost", 6379);
 await redis.start(); // Connects to Redis

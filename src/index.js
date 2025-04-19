@@ -22,7 +22,7 @@ async jsonset(key,jsonobj,model_name,ttl){
             throw new Error("parameter in jsonset in not present");
         }
             await this.client.call("JSON.SET",model_name+":"+key,"$",JSON.stringify(jsonobj));
-        if (ttl!=undefined){
+        if (ttl!==undefined){
             await this.client.expire(model_name+":"+key,ttl);
         }
 
@@ -121,7 +121,7 @@ jsonqueryTextavailible(){
         }
 
         let resultarr=[];
-        ;
+
         if (preprocessor_optional) {
             preprocessor_optional(result,resultarr);
         }else{
@@ -134,8 +134,8 @@ jsonqueryTextavailible(){
 
     }
     /**
-     * it create schema so key val pairs inside json is findable add only those keys that you need to retrieve again.once set impossible to edit without flushdb command.you need to go to redis-cli to perform this task i do not add as it is dangerous as a function.
-     * @param {string} key_tag_arr - [ {key_name:value,tag_type:value, arr_type:value(),same as tag type only use when array tag is used,sortable optional `examples/example.js`.
+     * it create schema so key val pairs inside json is findable add only those keys that you need to retrieve again. once set impossible to edit without flushdb command. you need to go to redis-cli to perform this task i do not add as it is dangerous as a function.
+     * @param {Object[]} key_tag_arr - `[ {key_name:value,tag_type:value, arr_type:value()},{...}]`,same as tag type only use when array tag is used,sortable optional `examples/example.js`.
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data of same type.
      * @returns {void} the array of  objects satisfy query.
      */
@@ -192,7 +192,7 @@ async jsonSchemaIdx(model_name,key_tag_arr){
 }
     /**
      * it is special method chaining function which can be used for aggregation queries .
-     *  it has many method you can use there is grouping and normal filter .for case of find/filter you can also give fields in exec to get only required fields(it is like project in mongoose if familiar with mongodb) .
+     *  it has many method you can use there is grouping and normal filter .for case of find/filter you can also give fields in exec to get only required fields(it is like project in mongoose if familiar with mongodb) or you can use update method to update or add field .
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data ot same type.one where method instantize only for one model in each call it create aa new instance of a private claass it exec command after exec();see example for detailafter call it reset where to add new jsonset and jsonget.
      * @returns {object} the array of  objects satisfy query.
      */
@@ -332,8 +332,8 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
 
  async exec(...keys){
       let parsemode=-1;
-    if(keys==undefined || keys.length==0){
-        if (this.groupby==0){
+    if(keys==undefined || keys.length===0){
+        if (this.groupby===0){
         parsemode=0;
         this.searcharr.push("LOAD", "*");
 
@@ -356,7 +356,7 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
       const resultparserr={
           "0":()=>{
               for (let i=1;i<result.length;i++){
-                  resultparsed.push(JSON.parse(result[i][3]));
+                  resultparsed.push(JSON.parse(result[i][result[i].length-1]));
               }
           },
           "1":()=>{
@@ -373,6 +373,37 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
       resultparserr[parsemode]();
       return (resultparsed);
 
+  }
+
+
+
+    /**
+     *it is used for whereaggregator to update found values.(don't tense for performance it is atomic)
+     * @param {string[]} arrofrequiredfieldforop - array of the fieds used in eqn for operation.
+     * @param {string} pathinput - simple json path like data.friends for this exa=`{name:john doe,data:{friends:[]}}`
+     * @param {string } method -currenly only "set" works{push will be added shortly}.
+     @param {string} eqn -to construct equation you have five operators`[+,-,*,/,&]` here +,-,*,/ are arthimetic and & is for concatination .`note`:don't use brackets and those strings that are not part of schemakey(forget bodmass it process fromleft (some limitation for speed)) `exa`-`(2+age*6&first_name)==(((2+age)*6)&first_name)`.we will make less performant function for bodmass.
+     */
+    async update(pathinput,method,arrofrequiredfieldforop,eqn){
+        function tokenizeExpression(expr) {
+
+            const pattern = /([a-zA-Z_][a-zA-Z0-9_]*)|(\d*\.?\d+)|([+\-*&/])/g;
+            const tokens = [...expr.matchAll(pattern)].map(match => match[0]);
+            return tokens;
+        }
+        let tokenized=tokenizeExpression(eqn);
+ if (this.groupby===1){
+     throw new Error("after groupby update not possible");
+ }
+let locationobj={};
+ for (let i=0;i<arrofrequiredfieldforop.length;i++){
+     locationobj[arrofrequiredfieldforop[i]]=2*i+4;
+ }
+
+ this.searcharr.splice(3,0,"LOAD",1+arrofrequiredfieldforop.length,"__key",...arrofrequiredfieldforop);
+
+        let resultres =await this.client.call("FCALL","aggregatorupdate",5,pathinput, JSON.stringify(locationobj),JSON.stringify(tokenized),method,JSON.stringify(this.searcharr));
+        return resultres;
   }
 }
 
@@ -419,7 +450,7 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
     }
     jsonarrparser(result){
         let finalarr=[];
-        for (let i=0;result[i]!=undefined;i++){
+        for (let i=0;result[i]!==undefined;i++){
             finalarr.push(result[i][0]);
 
         }
@@ -429,30 +460,9 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
         *it is used to execute where atomically.
        */
     async exec(){
-        const luascript=`
-       local operationset=cjson.decode(KEYS[1])
-       local operationget=cjson.decode(KEYS[2])
-       local ttl=KEYS[4]
-       local model_name=KEYS[3]
-       local res
-       for i, name in ipairs(operationset) do
-       redis.call("JSON.SET",model_name .. ":" .. name[1],"$",cjson.encode(name[2]))
-       redis.call("EXPIRE",model_name .. ":" .. name[1],ttl)
-       end
-        local gets={ }
-       for i, name in ipairs(operationget) do
-        local path = "$"
-        if name[2] ~= "" then
-        path = "$." .. name[2]
-        end
-        gets[i-1]=cjson.decode(redis.call("JSON.GET",model_name .. ":" .. name[1],path) )
-       end
 
-       return cjson.encode(gets)
-
-       `;
-
-        const result= JSON.parse(await this.client.eval(luascript,4,JSON.stringify(this.operationset),JSON.stringify(this.operationget),this.model_name,this.ttl));
+       let function_name="setget";
+const result=JSON.parse(await this.client.call("FCALL",function_name,4,JSON.stringify(this.operationset),JSON.stringify(this.operationget),this.model_name,this.ttl));
 
         this.operationget=[];
         this.operationset=[];
@@ -461,90 +471,6 @@ jsonaccumulator(key, MAX_MIN_AVG_SUM_TOLIST){
     }
 }
 }
-// import redis_exp from "../src/index.js";
-//
-//
-// const redis=new redis_exp("localhost",6379);
-// await redis.start();
-//
-// await redis.jsonSchemaIdx("Us",[{
-//     key_name:"id",
-//     tag_type:"NUMERIC",
-//     sortable: true,
-// }, {
-//     key_name:"first_name",
-//     tag_type:"TEXT",
-//     sortable:true
-// },{
-//     key_name:"last_name",
-//     tag_type:"TEXT"
-// },{
-//     key_name:"email",
-//     tag_type:"TAG"
-// },{
-//     key_name:"gender",
-//     tag_type:"TAG"
-// },{
-//     key_name:"age",
-//     tag_type:"NUMERIC",
-//     sortable:true
-// },{
-//     key_name: "friends",
-//     tag_type:"TEXT",
-//     arr_type:"TEXT"
-// }]);
-// redis.jsonset("jay",{
-//     first_name:"Jay",
-//     last_name:"Singh",
-//     email:"jay@jay.com",
-//     gender:"male",
-//     age:12,
-// },"Us",12000);
-// redis.jsonset("jay2",{
-//     first_name:"Jay2",
-//     last_name:"Singh",
-//     email:"jay@jay2.com",
-//     gender:"male",
-//     age:12,
-//     friends:["ab","dggd","sgsgs"]
-// },"Us",12000);
-// redis.jsonset("jay3",{
-//     first_name:"Jay3",
-//     last_name:"Singh3",
-//     email:"jay@jay3.com",
-//     gender:"male",
-//     age:35,
-//     friends:["ab","dggd","sgsgs"]
-// },"Us",12000);
-// redis.jsonset("jay4",{
-//     first_name:"Jay4",
-//     last_name:"Singh4",
-//     email:"jay@jay4.com",
-//     gender:"male",
-//     age:68,
-//     friends:["ab","dggd","sgsgs"]
-// },"Us",12000);
-// redis.jsonset("jay5",{
-//     first_name:"Jay5",
-//     last_name:"Singh5",
-//     email:"jay@jay5.com",
-//     gender:"male",
-//     age:19,
-//     friends:["ab","dggd","sgsgs"]
-// },"Us",12000);
-//
-// const ex1=( await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").exec());
-// const ex2= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("age","SUM").exec();
-// const ex3= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("age","SUM").exec();
-// const ex4= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").jsongroup("age").jsonaccumulator("age","SUM").exec();
-// const ex5= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").exec("first_name","last_name","friends");
-//
-// const ex6= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").jsongroup("age").jsonaccumulator("age","SUM").exec();
-// const ex7= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("last_name","TOLIST").jsonaccumulator("age","SUM").exec();
 
-// await redis.jsonset("abc234",{"name":"abhay",friends:["abhay","aaa","shivam"]},"USER",20);
-// const result=await redis.where("USER",676).jsonget("abc234","").jsonset("abc234",{"name":"abghghhay",friends:["abhay","aaa","shivam"]}).jsonset("abchg234",{"name":"abhghay",friends:["abhay","aaa","shivam"]}).jsonset("abc2gh34",{"name":"abhay",friends:["abhay","aaa","shivam"]}).exec()
 
-// console.log(ex1);
-//
 

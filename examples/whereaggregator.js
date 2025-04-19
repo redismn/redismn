@@ -78,6 +78,8 @@ const ex5= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay
 
 const ex6= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").jsongroup("age").jsonaccumulator("age","SUM").exec();
 const ex7= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("last_name","TOLIST").jsonaccumulator("age","SUM").exec();
+//update
+const ex8=( await redis.whereagregater("Us").jsonnumrange("first_name","Jay2","Jay5").jsonnumrange("age",5,100).update("uttypgt","abhay",["age","first_name","last_name"],"last_name"))//update("age","push",["age"],"hk+hnv"));
 
 console.log(ex1);
 
