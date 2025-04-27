@@ -1,6 +1,6 @@
 # RedisExp - Simplified Redis client library.
 
-RedisExp is a Node.js library that simplifies interactions with RedisJSON and RediSearch. It provides an intuitive API for storing JSON documents, querying, atomic transactions, and advanced aggregations.(hset ,set ,zset,timeseries and bloom are currently developed by us)
+RedisExp is a Node.js library that simplifies interactions with Redis-Stack. It provides an intuitive API for storing documents, querying, atomic transactions, and advanced aggregations.currently fully supported fo json (every feature).(hset ,set ,zset,timeseries and bloom are currently developed by us)
 
 ## Features
 
@@ -64,7 +64,7 @@ Let me know if you want to include example input/output or a quick visual of how
 Ensure Redis is running with [RedisJSON](https://redis.io/docs/stack/json/) and [RediSearch](https://redis.io/docs/stack/search/) modules.
 
 ```bash
-npm install ioredis redismn
+npm install redismn
 ```
 
 ## Usage
