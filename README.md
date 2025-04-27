@@ -1,6 +1,12 @@
 # RedisExp - Simplified Redis client library.
 
 RedisExp is a Node.js library that simplifies interactions with Redis-Stack. It provides an intuitive API for storing documents, querying, atomic transactions, and advanced aggregations.currently fully supported fo json (every feature).(hset ,set ,zset,timeseries and bloom are currently developed by us)
+### `update` -in this update a delete key method is added in where().
+- **jsondelkey**: to delete key in model.
+- **jsongetbulk**-to add multiple get
+- **jsonsetbulk**-to add  multiple set requests
+everything will be done after exec()
+
 
 ## Features
 

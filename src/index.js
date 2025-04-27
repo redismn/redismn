@@ -1,5 +1,6 @@
 import ioRedis from "ioredis";
 
+
 export default class redis_exp{
     constructor(url,port){
      this.client=new ioRedis({
@@ -8,7 +9,7 @@ export default class redis_exp{
      })
 }
 async start(){
-      this.#startUP()  ;
+     await  this.#startUP()  ;
 }
 async #startUP(){
     const function_script1=`
@@ -16,6 +17,7 @@ async #startUP(){
        local operationget=cjson.decode(KEYS[2])
        local ttl=KEYS[4]
        local model_name=KEYS[3]
+       local operationdel=cjson.decode(KEYS[5])
        local res
        for i, name in ipairs(operationset) do
        redis.call("JSON.SET",model_name .. ":" .. name[1],"$",cjson.encode(name[2]))
@@ -24,10 +26,18 @@ async #startUP(){
         local gets={ }
        for i, name in ipairs(operationget) do
         local path = "$"
-        if name[2] ~= "" then
+        if name[2] ~=""  then
         path = "$." .. name[2]
         end
-        gets[i-1]=cjson.decode(redis.call("JSON.GET",model_name .. ":" .. name[1],path) )
+        local resp=redis.call("JSON.GET",model_name .. ":" .. name[1],path) 
+        if(resp==nil or resp==false) then
+        gets[i-1]={}
+        else 
+        gets[i-1]=cjson.decode(resp)
+        end
+       end
+       for i, name in ipairs(operationdel) do
+       redis.call("DEL",model_name .. ":" .. name) 
        end
 
        return cjson.encode(gets)
@@ -71,12 +81,18 @@ return "done"
 
 `;
     const function_name2 = "aggregatorupdate";
+
     try{
         await this.client.call("FUNCTION","LOAD",`#!lua name=mylib2 \n redis.register_function("${function_name2}",function(KEYS,ARGS) ${function_script2} end) \n redis.register_function("${function_name1}",function(KEYS,ARGS) ${function_script1} end)`)
 
 
-    }catch (e){
+    }
 
+    catch (e){
+        if (e.message!="ERR Library 'mylib2' already exists"){
+throw e;
+
+        }
     }
     console.log("pinging redis"+":"+await this.client.ping());
 
@@ -486,6 +502,7 @@ let locationobj={};
         }
         this.operationget=[];
         this.operationset=[];
+        this.operationdel=[];
         this.client=client;
         this.model_name=model_name;
         this.ttl = ttl;
@@ -503,6 +520,14 @@ let locationobj={};
     }
        /**
         *it is used to get from json using get.
+        * @param {... string} key -the key which is used to set`(root key)`.you want to delete.
+        */
+       jsondelkey(...key){
+           this.operationdel.push(...key);
+           return this;
+       }
+       /**
+        *it is used to get from json using get.
         * @param {string} key -the key which is used to set`(root key)`.
        * @param {string} pathinput -innerpath to get ,example `user1={name:someone,detail:{friends:[f1,f2,f3]}}` here user 1 is key and pathinput for friends is `detail.friends` .
         */
@@ -511,7 +536,27 @@ let locationobj={};
         return this;
     }
        /**
-        *it is used to get from json using get.
+        *it is used to get from json using get in bulk.
+        * @param {string[]} arr -each item of this array contain two values `[[key,pathinput],[],..]`.
+        */
+    jsongetbulk(arr){
+        arr.forEach(item=>{
+            this.jsonget(item[0],item[1]);
+        })
+           return this;
+    }
+       /**
+        *it is used to set from json using get in bulk.
+        * @param {string[]} arr -each item of this array contain two values `[[key,jsonobj],[],..]`.
+        */
+    jsonsetbulk(arr){
+        arr.forEach(item=>{
+            this.jsonset(item[0],item[1]);
+        })
+        return this;
+    }
+       /**
+        *it is used to set value jsonobj in json.
         * @param {string} key -the key which is used to set`(root key)`.
         * @param {string} jsonobj - `{name:someone,detail:{friends:[f1,f2,f3]}}` ,it must be in json`(not stringified)`.
         */
@@ -519,7 +564,7 @@ let locationobj={};
         this.operationset.push([key, jsonobj]);
         return this;
     }
-    jsonarrparser(result){
+    #jsonarrparser(result){
         let finalarr=[];
         for (let i=0;result[i]!==undefined;i++){
             finalarr.push(result[i][0]);
@@ -528,16 +573,16 @@ let locationobj={};
         return finalarr;
     }
        /**
-        *it is used to execute where atomically.
+        *it is used to execute where atomically.it return an array of output of all get requests and if something is not availible in db then its index is undefined.
        */
     async exec(){
 
        let function_name="setget";
-const result=JSON.parse(await this.client.call("FCALL",function_name,4,JSON.stringify(this.operationset),JSON.stringify(this.operationget),this.model_name,this.ttl));
+const result=JSON.parse(await this.client.call("FCALL",function_name,5,JSON.stringify(this.operationset),JSON.stringify(this.operationget),this.model_name,this.ttl,JSON.stringify(this.operationdel)));
 
         this.operationget=[];
         this.operationset=[];
-        return this.jsonarrparser(result);
+        return this.#jsonarrparser(result);
 
     }
 }
