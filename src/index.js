@@ -87,7 +87,7 @@ return "done"
     local fields=cjson.decode(KEYS[3])
     local resp={};
     for i,name in ipairs(getkeys) do
-    resp[#resp+1]=redis.call("JSON.GET",model_name..":" .. name,unpack(fields))
+    resp[#resp+1]=redis.call("JSON.GET",model_name..":" .. name,unpack(fields)) 
     
     end
     return resp;
@@ -121,7 +121,7 @@ throw e;
     console.log("pinging redis"+":"+await this.client.ping());
 
 }/**
-     *it is used to get from json using get in bulk.`await jsongetmultkey().keys(...keys);
+     *it is used to get from json using get in bulk.`await jsongetmultkey().keys(...keys)` or ` normalize awaitjsongetmultkey().normalizekeys(...keys)` normalize it is additional postprocessor to convert null to undefined;
      * @param {string[]} fields -want to add in output. if not specified this will take *.
      * @param{string} model_name-name of model you want to fetch.
      *
@@ -131,14 +131,14 @@ jsongetmultkey(model_name,...fields){
        if (fields==undefined){
            return {keys:async function (...keys){
                    let res=await redis_ref.call("FCALL","jsonmultkey",3,model_name,JSON.stringify(keys),JSON.stringify(" "));
-                   let res_processed=res.map((item)=>JSON.parse(item));
+                   let res_processed=res.map((item)=>item===null?undefined:JSON.parse(item));
                    return res_processed;
                }
            }
        }
         return {keys:async function (...keys){
                 let res=await redis_ref.call("FCALL","jsonmultkey",3,model_name,JSON.stringify(keys),JSON.stringify(fields));
-                let res_processed=res.map((item)=>JSON.parse(item));
+                let res_processed=res.map((item)=>item===null?undefined:JSON.parse(item));
                 return res_processed;
         }
         }
@@ -624,7 +624,7 @@ let locationobj={};
     #jsonarrparser(result){
         let finalarr=[];
         for (let i=0;result[i]!==undefined;i++){
-            finalarr.push(result[i][0] || null);
+            finalarr.push(result[i][0]);
 
         }
         return finalarr;
