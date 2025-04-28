@@ -43,9 +43,8 @@ async #startUP(){
        return cjson.encode(gets)
 
        `;
-
-    let function_name1="setget";
-    let function_script2=`
+    const function_name1="setget";
+    const function_script2=`
 local functable={
   ["+"]= function(arr,obj,redisresi,i,eqntable) local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn+redisresi[obj[arr[i+1]]]) else eqntable.eqn=(eqntable.eqn+test) end end,
    ["-"]= function(arr,obj,redisresi,i,eqntable) local test=tonumber(arr[i+1]) if(test==nil) then eqntable.eqn=(eqntable.eqn-redisresi[obj[arr[i+1]]]) else eqntable.eqn=eqntable.eqn-test end end,
@@ -81,9 +80,34 @@ return "done"
 
 `;
     const function_name2 = "aggregatorupdate";
+    const function_name3="jsonmultkey";
+    const function_script3=`
+    local model_name=KEYS[1]
+    local getkeys=cjson.decode(KEYS[2])
+    local fields=cjson.decode(KEYS[3])
+    local resp={};
+    for i,name in ipairs(getkeys) do
+    resp[#resp+1]=redis.call("JSON.GET",model_name..":" .. name,unpack(fields))
+    
+    end
+    return resp;
+    `;
+    /**
+     *it is used to get from json using get in bulk.
+     * @param {string[][2]} functions -arr of key name.
+     */
+    function args(libname,...functions){
+        let args=`#!lua name=${libname}`
+        functions.forEach((item)=>{
+            args+=`\n redis.register_function("${item[0]}",function(KEYS,ARGS) ${item[1]} end)`
+        })
+       return args;
+    }
 
     try{
-        await this.client.call("FUNCTION","LOAD",`#!lua name=mylib2 \n redis.register_function("${function_name2}",function(KEYS,ARGS) ${function_script2} end) \n redis.register_function("${function_name1}",function(KEYS,ARGS) ${function_script1} end)`)
+        const function_args=args("mylib2",[function_name1,function_script1],[function_name2,function_script2],[function_name3,function_script3]);
+        await  this.client.call("FUNCTION","LOAD",function_args);
+        // await this.client.call("FUNCTION","LOAD",`#!lua name=mylib2 \n redis.register_function("${function_name2}",function(KEYS,ARGS) ${function_script2} end) \n redis.register_function("${function_name1}",function(KEYS,ARGS) ${function_script1} end)`)
 
 
     }
@@ -95,6 +119,29 @@ throw e;
         }
     }
     console.log("pinging redis"+":"+await this.client.ping());
+
+}/**
+     *it is used to get from json using get in bulk.`await jsongetmultkey().keys(...keys);
+     * @param {string[]} fields -want to add in output. if not specified this will take *.
+     * @param{string} model_name-name of model you want to fetch.
+     *
+     */
+jsongetmultkey(model_name,...fields){
+       let redis_ref=this.client;
+       if (fields==undefined){
+           return {keys:async function (...keys){
+                   let res=await redis_ref.call("FCALL","jsonmultkey",3,model_name,JSON.stringify(keys),JSON.stringify(" "));
+                   let res_processed=res.map((item)=>JSON.parse(item));
+                   return res_processed;
+               }
+           }
+       }
+        return {keys:async function (...keys){
+                let res=await redis_ref.call("FCALL","jsonmultkey",3,model_name,JSON.stringify(keys),JSON.stringify(fields));
+                let res_processed=res.map((item)=>JSON.parse(item));
+                return res_processed;
+        }
+        }
 
 }
     /**
@@ -134,7 +181,7 @@ async jsongetAll(key,model_name){
 
 }
     /**
-     * return a object with a given key and for current model.
+     * return an object with a given key and for current model.
      * @param {string} pathinput - use to get inside object for 'user={"name":"abhay","data":{"friends":[]}}' to get friends we need to use path 'data.friends'  .
      * @param {string} key - Used as the identifier for the object. For example, in `user1 = { name: "name" }`, "user1" is the key.
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data ot same type.
@@ -537,6 +584,16 @@ let locationobj={};
     }
        /**
         *it is used to get from json using get in bulk.
+        * @param {string[]} arr -arr of key name.
+        */
+    jsongetmultikey(...keys){
+        keys.forEach(item=>{
+            this.jsonget(item,"");
+        })
+        return this;
+    }
+       /**
+        *it is used to get from json using get in bulk.
         * @param {string[]} arr -each item of this array contain two values `[[key,pathinput],[],..]`.
         */
     jsongetbulk(arr){
@@ -567,7 +624,7 @@ let locationobj={};
     #jsonarrparser(result){
         let finalarr=[];
         for (let i=0;result[i]!==undefined;i++){
-            finalarr.push(result[i][0]);
+            finalarr.push(result[i][0] || null);
 
         }
         return finalarr;

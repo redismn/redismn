@@ -3,7 +3,7 @@ import redis_exp from "../src/index.js";
 
 const redis=new redis_exp("localhost",6379);
 await redis.start();
-
+//important for searching (you should create schema only those field by which you will find them in redis,note=it is only writtable once)
 await redis.jsonSchemaIdx("Us",[{
     key_name:"id",
     tag_type:"NUMERIC",
@@ -30,6 +30,7 @@ await redis.jsonSchemaIdx("Us",[{
     tag_type:"TEXT",
     arr_type:"TEXT"
 }]);
+
 redis.jsonset("jay",{
     first_name:"Jay",
     last_name:"Singh",
@@ -37,6 +38,7 @@ redis.jsonset("jay",{
     gender:"male",
     age:12,
 },"Us",12000);
+
 redis.jsonset("jay2",{
     first_name:"Jay2",
     last_name:"Singh",
@@ -45,6 +47,7 @@ redis.jsonset("jay2",{
     age:12,
     friends:["ab","dggd","sgsgs"]
 },"Us",12000);
+
 redis.jsonset("jay3",{
     first_name:"Jay3",
     last_name:"Singh3",
@@ -53,6 +56,7 @@ redis.jsonset("jay3",{
     age:35,
     friends:["ab","dggd","sgsgs"]
 },"Us",12000);
+
 redis.jsonset("jay4",{
     first_name:"Jay4",
     last_name:"Singh4",
@@ -61,6 +65,7 @@ redis.jsonset("jay4",{
     age:68,
     friends:["ab","dggd","sgsgs"]
 },"Us",12000);
+
 redis.jsonset("jay5",{
     first_name:"Jay5",
     last_name:"Singh5",
@@ -69,18 +74,8 @@ redis.jsonset("jay5",{
     age:19,
     friends:["ab","dggd","sgsgs"]
 },"Us",12000);
+let res1=await redis.jsongetmultkey("Us","first_name").keys("jay4","jay5");
+let res2=await redis.jsongetmultkey("Us","first_name","last_name").keys("jay4","jay5");
 
-const ex1=( await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").exec("first_name","last_name"));
-const ex2= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("age","SUM").exec();
-const ex3= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("age","SUM").exec();
-const ex4= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").jsongroup("age").jsonaccumulator("age","SUM").exec();
-const ex5= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").exec("first_name","last_name","friends");
-
-const ex6= await redis.whereagregater("Us").jsonnumrange("first_name",`Jay`,"Jay4").jsongroup("age").jsonaccumulator("age","SUM").exec();
-const ex7= await redis.whereagregater("Us").jsongroup("age").jsonaccumulator("last_name","TOLIST").jsonaccumulator("age","SUM").exec();
-//update
-const ex8=( await redis.whereagregater("Us").jsonnumrange("first_name","Jay2","Jay5").jsonnumrange("age",5,100).update("uttypgt","abhay",["age","first_name","last_name"],"last_name"))//update("age","push",["age"],"hk+hnv"));
-
-console.log(ex1);
-
-
+console.log(res1);
+console.log(res2);

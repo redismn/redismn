@@ -1,4 +1,4 @@
-import redis_exp from "redismn";
+import redis_exp from "../src/index.js";
 
 const redis=new redis_exp("localhost","6379");
 await redis.start();

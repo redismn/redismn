@@ -1,11 +1,26 @@
 # RedisExp - Simplified Redis client library.
 
 RedisExp is a Node.js library that simplifies interactions with Redis-Stack. It provides an intuitive API for storing documents, querying, atomic transactions, and advanced aggregations.currently fully supported fo json (every feature).(hset ,set ,zset,timeseries and bloom are currently developed by us)
-### `update` -in this update a delete key method is added in where().
-- **jsondelkey**: to delete key in model.
-- **jsongetbulk**-to add multiple get
-- **jsonsetbulk**-to add  multiple set requests
-everything will be done after exec()
+### `update` -in this update a new method is addded jsongetmultkey()
+- **usage** - 
+```js
+await redis.jsongetmultkey("user","first_name","last_name").keys("us1","us2","usn");
+ ```
+output=`[{first_name:"john","last_name:"doe"},{first_name:"mari","last_name:"doe",age:70,married:true},{first_name:"mariana","last_name:"jane",age:55,married:true}]`
+fields not specified
+```js
+await redis.jsongetmultkey("user").keys("us1","us2","usn");
+
+ ```
+output=`[{first_name:"john","last_name:"doe",age:78,married:true},{first_name:"mari","last_name:"doe",age:70,married:true},null]` null if not avaiible
+if only one field specified
+
+```js
+await redis.jsongetmultkey("user","first_name").keys("us1","us2","usn");
+
+ ```
+output=`["john","mari",null]`
+
 
 
 ## Features
@@ -258,6 +273,26 @@ A Node.js wrapper for RedisJSON and RediSearch operations. Provides methods for 
   - `key` (String): Object identifier.
   - `model_name` (String): Namespace.
 - **Returns**: (Object | undefined) Parsed JSON or `undefined` if not found.
+### `jsongetmultkey()`
+- **usage** -
+```js
+await redis.jsongetmultkey("user","first_name","last_name").keys("us1","us2","usn");
+ ```
+output=`[{first_name:"john","last_name:"doe"},{first_name:"mari","last_name:"doe",age:70,married:true},{first_name:"mariana","last_name:"jane",age:55,married:true}]`
+fields not specified
+```js
+await redis.jsongetmultkey("user").keys("us1","us2","usn");
+
+ ```
+output=`[{first_name:"john","last_name:"doe",age:78,married:true},{first_name:"mari","last_name:"doe",age:70,married:true},null]` null if not avaiible
+if only one field specified
+
+```js
+await redis.jsongetmultkey("user","first_name").keys("us1","us2","usn");
+
+ ```
+output=`["john","mari",null]`
+
 
 ### `jsonget(key, pathinput, model_name)`
 - **Description**: Fetches a nested property using a dot path.

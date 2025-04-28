@@ -74,3 +74,8 @@ redis.jsonset("jay5",{
     age:19,
     friends:["ab","dggd","sgsgs"]
 },"Us",12000);
+let res1=await redis.jsongetmultkey("Us","first_name").keys("jay4","jay5");
+let res2=await redis.jsongetmultkey("Us","first_name","last_name").keys("jay4","jay5");
+
+console.log(res1);
+console.log(res2);
