@@ -2,11 +2,15 @@ import ioRedis from "ioredis";
 
 
 export default class redis_exp{
+    static idx={
+
+    };
     constructor(url,port){
      this.client=new ioRedis({
          host:url,
          port:port
-     })
+     });
+
 }
 async start(){
      await  this.#startUP()  ;
@@ -199,7 +203,7 @@ async jsonget(key,pathinput,model_name){
     }
 }
     /**
-     * return a array of object with a given query and for current model.
+     * return  array of object with a given query and for current model.
      * @param {string} val - is query you asked for detail for queries call this function jsonqueryTextavailible  .
      * @param {callback} [preprocessor_optional] - it takes two parameters result,resultprocessed.sometimes output of redis is unformatted of a joke of array inside arrays notnobject so we need to process it ,generally our default preprocessor works but sometime you need to manually preprocess it ,it is very rare but it needs.
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data ot same type.
@@ -229,7 +233,8 @@ jsonqueryTextavailible(){
             "simple phrase ":"(double inverted comman must)exact match",
             "texta |textb":"one of texta and textb is availble",
              "texta +textb":"both of texta and textb is availble",
-            "@key:value":"key value pair",
+            "@key:value":"key value pair for text",
+            "@key:{value}":"key value pair consist of tag,for tag every other option must inclose in {} ,ex @color:{blue:black}",
             "%valuue%":"use for ignore typos",
             "@key:[lowerbound upperbound]":"use for range search for numeric values ",
 
@@ -241,9 +246,10 @@ jsonqueryTextavailible(){
      * @param {string} key - it is  key .
      * @param {callback} [preprocessor_optional] - it takes two parameters result,resultprocessed.sometimes output of redis is unformatted of a joke of array inside arrays notnobject so we need to process it ,generally our default preprocessor works but sometime you need to manually preprocess it ,it is very rare but it needs.
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data ot same type.
-     * @returns {object} the array of  objects satisfy query.
+     * @returns {object} the array of  objects satisfies query.
      */
     async jsonquery(key ,val,model_name,preprocessor_optional){
+
         if (key===undefined||val===undefined||model_name===undefined){
             throw new Error("parameter in jsonquery in not present");
         }
@@ -268,19 +274,20 @@ jsonqueryTextavailible(){
 
     }
     /**
-     * it create schema so key val pairs inside json is findable add only those keys that you need to retrieve again. once set impossible to edit without flushdb command. you need to go to redis-cli to perform this task i do not add as it is dangerous as a function.
+     * it creates schema so key val pairs inside json is findable add only those keys that you need to retrieve again. once set impossible to edit without flushdb command. you need to go to redis-cli to perform this task i do not add as it is dangerous as a function.
      * @param {Object[]} key_tag_arr - `[ {key_name:value,tag_type:value, arr_type:value()},{...}]`,same as tag type only use when array tag is used,sortable optional `examples/example.js`.
      * @param {string} model_name - model_name.it is like model in mongoose,or collection to organise,data of same type.
-     * @returns {void} the array of  objects satisfy query.
+     * @returns {void} the array of  objects satisfies query.
      */
 async jsonSchemaIdx(model_name,key_tag_arr){
 //    [ {key_name:value,
 //         tag_type:value,
-//              arr_type:value();same as tag type only use when array tag is used
-//     sortable:true/false optional
+//              arr_type:value()  ;same as tag type only use when array tag is used
+//     sortable:true/false , optional
+//         nested_type:value,nested_address,:only used when type nested used,(for arr inside path after arr name use [*] ,ex data.friends[*].name for {data:{friends:[{name:"john"},{..},...]}})
 //    }
 //     ]
-//     availble tags=["TEXT","NUMERIC,"ARRAY","TAG",EXtras]
+//     availble tags=["TEXT","NUMERIC,"ARRAY","TAG","NESTED","BOOLEAN"]
     let indexes=await this.client.call("FT._LIST");
     const exists = indexes.includes(model_name);
     if (exists){
@@ -296,11 +303,17 @@ async jsonSchemaIdx(model_name,key_tag_arr){
             if (pair.arr_type!=undefined){
                 create.push(`$.${pair.key_name}[*]`,"AS",pair.key_name,pair.arr_type)   //$.first_name","AS","first_name","TEXT"
 
-            }else{
-                create.push(`$.${pair.key_name}`,"AS",pair.key_name,"TAG");
+            }
+
+            else{
+                    create.push(`$.${pair.key_name}`,"AS",pair.key_name,"TAG");
 
                 }
-            }
+        }else if(pair.tag_type=="NESTED"){
+
+            create.push(`$.${pair.nested_address}`,"AS",pair.key_name,pair.nested_type || "TAG");
+
+        }
 
         else{
             create.push(`$.${pair.key_name}`,"AS",pair.key_name,pair.tag_type);

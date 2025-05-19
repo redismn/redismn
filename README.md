@@ -2,7 +2,10 @@
 
 RedisExp is a Node.js library that simplifies interactions with Redis-Stack. It provides an intuitive API for storing documents, querying, atomic transactions, and advanced aggregations.currently fully supported fo json (every feature).(hset ,set ,zset,timeseries and bloom are currently developed by us)
 ### `update` -
-
+- **important note** - whenever you use tag type for searching  you must enclose value in {} for all methods ex -
+```js
+  redis.jsonquery("gender","{female}","user")
+ ```
 ### `in this update a new method is addded jsongetmultkey()`
 - **usage** - 
 ```js

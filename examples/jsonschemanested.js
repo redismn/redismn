@@ -1,17 +1,16 @@
 import redis_exp from "../src/index.js";
-
-
-const redis=new redis_exp("localhost",6379);
+const redis =new redis_exp("localhost","6379");
 await redis.start();
-
 await redis.jsonSchemaIdx("Us",[{
     key_name:"id",
     tag_type:"NUMERIC",
     sortable: true,
 }, {
-    key_name:"first_name",
-    tag_type:"TEXT",
-    sortable:true
+    key_name:"depth",
+    tag_type:"NESTED",
+    nested_address:"friends[*].name",
+    nested_type:"TEXT",
+
 },{
     key_name:"last_name",
     tag_type:"TEXT"
@@ -25,13 +24,9 @@ await redis.jsonSchemaIdx("Us",[{
     key_name:"age",
     tag_type:"NUMERIC",
     sortable:true
-},{
-    key_name: "friends",
-    tag_type:"TEXT",
-    arr_type:"TEXT"
 }]);
 
-redis.jsonset("jay",{
+await redis.jsonset("jay",{
     first_name:"Jay",
     last_name:"Singh",
     email:"jay@jay.com",
@@ -45,7 +40,6 @@ redis.jsonset("jay2",{
     email:"jay@jay2.com",
     gender:"male",
     age:12,
-    friends:["ab","dggd","sgsgs"]
 },"Us",12000);
 
 redis.jsonset("jay3",{
@@ -54,7 +48,7 @@ redis.jsonset("jay3",{
     email:"jay@jay3.com",
     gender:"male",
     age:35,
-    friends:["ab","dggd","sgsgs"]
+    friends:[{name:"ab"},{name:"dggd"},{name:"sgsgs"}]
 },"Us",12000);
 
 redis.jsonset("jay4",{
@@ -63,7 +57,7 @@ redis.jsonset("jay4",{
     email:"jay@jay4.com",
     gender:"male",
     age:68,
-    friends:["ab","dggd","sgsgs"]
+    friends:[{name:"ab"},{name:"dggd"},{name:"sgsgs"}]
 },"Us",12000);
 
 redis.jsonset("jay5",{
@@ -72,10 +66,9 @@ redis.jsonset("jay5",{
     email:"jay@jay5.com",
     gender:"male",
     age:19,
-    friends:["ab","dggd","sgsgs"]
+    friends:[{name:"ab"},{name:"dggd"},{name:"sgsgs"}]
 },"Us",12000);
-let res1=await redis.jsongetmultkey("Us","first_name").keys("jay4","jay5");
-let res2=await redis.jsongetmultkey("Us","first_name","last_name").keys("jay4","jay5");
 
-console.log(res1);
-console.log(res2);
+let result=await redis.jsonquery("gender","{male}","Us");
+console.log(result);
+
