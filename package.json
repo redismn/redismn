@@ -4,7 +4,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test": "node testing/test.js"
   },
   "author": "Abhay Singh Anshuman Singh",
   "license": "MIT",
