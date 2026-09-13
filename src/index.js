@@ -5,11 +5,8 @@ export default class redis_exp{
     static idx={
 
     };
-    constructor(url,port){
-     this.client=new ioRedis({
-         host:url,
-         port:port
-     });
+    constructor(...args){
+     this.client=new ioRedis(...args);
 
 }
 async start(){
